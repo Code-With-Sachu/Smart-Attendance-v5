@@ -1,63 +1,172 @@
 "use client";
+
 import Link from "next/link";
-import { ArrowRight, Check, FileSpreadsheet, MessageCircle, MousePointerClick, ShieldCheck } from "lucide-react";
+import {
+  ArrowRight,
+  BarChart3,
+  Check,
+  FileSpreadsheet,
+  MessageCircle,
+  MousePointerClick,
+  ShieldCheck,
+  Users,
+} from "lucide-react";
 import { ThemeSegmented } from "@/components/layout/theme-toggle";
 import { buttonClass } from "@/components/ui/button";
 
 const FEATURES = [
-  { icon: FileSpreadsheet, title: "Import student data", text: "Upload your class spreadsheet or link a Google Sheet. Roll numbers and names are detected for you." },
-  { icon: MousePointerClick, title: "Mark attendance quickly", text: "Everyone starts present — tap only the students who are absent." },
-  { icon: Check, title: "Review before you submit", text: "See present and absent lists with names and roll numbers, then confirm." },
-  { icon: MessageCircle, title: "Share through WhatsApp", text: "Send a clean report to your saved contacts in a couple of taps." },
+  {
+    icon: FileSpreadsheet,
+    title: "Import student data",
+    text: "Upload CSV or Excel student files and organize your class list without manually entering every student.",
+  },
+  {
+    icon: MousePointerClick,
+    title: "Mark attendance quickly",
+    text: "Start with the full class present and tap students to mark them absent in seconds.",
+  },
+  {
+    icon: BarChart3,
+    title: "Track attendance history",
+    text: "Review previous attendance sessions, records, and class statistics from one organized workspace.",
+  },
+  {
+    icon: MessageCircle,
+    title: "Share attendance reports",
+    text: "Prepare clean attendance reports and share them through WhatsApp when needed.",
+  },
 ];
 
-function markOnboarded() {
-  document.cookie = "sa_onboarded=1; path=/; max-age=31536000; samesite=lax";
-}
+const HIGHLIGHTS = [
+  "Student management",
+  "Modules & sub-modules",
+  "Attendance history",
+  "Attendance analytics",
+  "File import support",
+  "WhatsApp sharing",
+  "Dark & light mode",
+];
 
 export default function WelcomePage() {
   return (
-    <div className="w-full max-w-5xl">
-      <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
+    <main className="w-full max-w-6xl">
+      <section className="grid items-center gap-12 lg:grid-cols-[1.15fr_0.85fr] lg:gap-20">
+        {/* Left Section */}
         <div>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-fg-muted">
-            <ShieldCheck className="size-3.5 text-success" aria-hidden /> Private to your teacher account
-          </span>
-          <h1 className="mt-5 text-4xl font-semibold tracking-tight text-fg sm:text-5xl">Smart Attendance</h1>
-          <p className="mt-4 max-w-lg text-lg text-fg-muted">
-            A fast and intelligent attendance workspace for teachers. Turn your class spreadsheet into a ready-to-use register
-            in under a minute.
+          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-fg-muted shadow-card">
+            <ShieldCheck
+              className="size-3.5 text-success"
+              aria-hidden
+            />
+            Simple · Organized · Fast
+          </div>
+
+          <h1 className="mt-6 text-4xl font-semibold tracking-tight text-fg sm:text-5xl lg:text-6xl">
+            Smart Attendance
+          </h1>
+
+          <p className="mt-5 max-w-2xl text-lg leading-8 text-fg-muted sm:text-xl">
+            A modern attendance management workspace designed to make
+            classroom attendance faster, simpler, and easier to organize.
           </p>
+
+          <p className="mt-4 max-w-xl text-sm leading-6 text-fg-muted">
+            Manage students, organize your classes, record attendance, review
+            previous sessions, analyze attendance data, and keep your complete
+            attendance workflow in one place.
+          </p>
+
+          {/* Go to Home */}
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            <Link href="/register" onClick={markOnboarded} className={buttonClass("primary", "lg")}>
-              Get Started <ArrowRight />
-            </Link>
-            <Link href="/login" onClick={markOnboarded} className={buttonClass("secondary", "lg")}>
-              I already have an account
+            <Link
+              href="/"
+              className={buttonClass("primary", "lg")}
+            >
+              Go to Home
+              <ArrowRight />
             </Link>
           </div>
-          <div className="mt-8 flex flex-wrap items-center gap-3 text-sm text-fg-muted">
+
+          {/* Highlights */}
+          <div className="mt-8 flex flex-wrap gap-2">
+            {HIGHLIGHTS.map((item) => (
+              <span
+                key={item}
+                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs text-fg-muted"
+              >
+                <Check
+                  className="size-3.5 text-success"
+                  aria-hidden
+                />
+                {item}
+              </span>
+            ))}
+          </div>
+
+          {/* Theme */}
+          <div className="mt-8 flex items-center gap-3 text-sm text-fg-muted">
             <span>Appearance</span>
             <ThemeSegmented />
           </div>
         </div>
 
-        <ul className="grid gap-3">
-          {FEATURES.map((f) => (
-            <li key={f.title} className="flex gap-4 rounded-2xl border border-border bg-card p-4 shadow-card">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
-                <f.icon className="size-5" aria-hidden />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 text-[15px] font-semibold text-fg">
-                  <Check className="size-4 text-success" aria-hidden /> {f.title}
-                </div>
-                <p className="mt-0.5 text-sm text-fg-muted">{f.text}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
+        {/* Right Section */}
+        <div className="grid gap-4">
+          {/* Main Feature Card */}
+          <div className="rounded-3xl border border-border bg-card p-6 shadow-card">
+            <div className="flex size-11 items-center justify-center rounded-2xl bg-primary-soft text-primary">
+              <Users
+                className="size-5"
+                aria-hidden
+              />
+            </div>
+
+            <h2 className="mt-5 text-xl font-semibold text-fg">
+              Everything for your classroom
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-fg-muted">
+              Keep your students, classes, attendance sessions, history, and
+              reports organized from preparation to final submission.
+            </p>
+          </div>
+
+          {/* Feature List */}
+          <ul className="grid gap-3">
+            {FEATURES.map((feature) => {
+              const Icon = feature.icon;
+
+              return (
+                <li
+                  key={feature.title}
+                  className="flex gap-4 rounded-2xl border border-border bg-card p-4 shadow-card"
+                >
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+                    <Icon
+                      className="size-5"
+                      aria-hidden
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-2 text-[15px] font-semibold text-fg">
+                      <Check
+                        className="size-4 text-success"
+                        aria-hidden
+                      />
+                      {feature.title}
+                    </div>
+
+                    <p className="mt-1 text-sm leading-5 text-fg-muted">
+                      {feature.text}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </section>
+    </main>
   );
 }

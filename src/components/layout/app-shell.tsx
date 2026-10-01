@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -30,6 +30,7 @@ import { Avatar } from "@/components/ui/misc";
 import { MoreMenu } from "@/components/ui/dropdown";
 import { apiFetch, ApiClientError } from "@/lib/client/api";
 import { OUTBOX_EVENT, outboxKey, readLocal, writeLocal, type OutboxItem } from "@/lib/client/storage";
+import { FloatingSMAssistant } from "@/components/ai/floating-sm-assistant";
 
 const NAV = [
   { href: "/profile", label: "Profile", icon: UserIcon },
@@ -105,7 +106,7 @@ function OutboxSync() {
     setPending(items.length);
     if (!items.length || syncing.current || !navigator.onLine) return;
     syncing.current = true;
-    const t = toast.loading(`Syncing ${items.length} saved attendance ${items.length === 1 ? "session" : "sessions"}…`);
+    const t = toast.loading(`Syncing ${items.length} saved attendance ${items.length === 1 ? "session" : "sessions"}â€¦`);
     let remaining = [...items];
     for (const item of items) {
       try {
@@ -113,8 +114,8 @@ function OutboxSync() {
         remaining = remaining.filter((i) => i.clientId !== item.clientId);
         toast.success(`Synced: ${item.label}`);
       } catch (e) {
-        if (e instanceof ApiClientError && e.isNetwork) break; // still offline — keep everything
-        // A real conflict (e.g. already submitted elsewhere) — drop it and tell the teacher
+        if (e instanceof ApiClientError && e.isNetwork) break; // still offline â€” keep everything
+        // A real conflict (e.g. already submitted elsewhere) â€” drop it and tell the teacher
         remaining = remaining.filter((i) => i.clientId !== item.clientId);
         toast.error(`${item.label}: ${(e as Error).message}`, { duration: 10000 });
       }
@@ -174,7 +175,7 @@ function GlobalSearch() {
         value={q}
         onChange={(e) => setQ(e.target.value)}
         aria-label="Search modules, students and attendance"
-        placeholder="Search modules, students, records…"
+        placeholder="Search modules, students, recordsâ€¦"
         className="h-9 w-full rounded-lg border border-border bg-muted/60 pl-9 pr-14 text-sm text-fg placeholder:text-fg-subtle focus:border-primary focus:bg-surface focus:outline-none focus:ring-3 focus:ring-primary/15"
       />
       <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-border bg-card px-1.5 py-0.5 font-mono text-[10px] text-fg-subtle">
@@ -286,6 +287,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
 
+      <FloatingSMAssistant />
+
       {/* Mobile bottom navigation */}
       {!focusMode && (
         <nav
@@ -358,3 +361,4 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+

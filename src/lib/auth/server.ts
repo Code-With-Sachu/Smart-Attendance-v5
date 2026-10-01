@@ -1,30 +1,32 @@
 import "server-only";
-import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { SESSION_COOKIE, SESSION_MAX_AGE, signSession } from "./jwt";
 import type { UserDoc } from "../models";
+import { signSession, SESSION_MAX_AGE } from "./jwt";
 
 export async function hashPassword(pw: string) {
   return bcrypt.hash(pw, 12);
 }
+
 export async function checkPassword(pw: string, hash: string) {
   return bcrypt.compare(pw, hash);
 }
 
 export async function startSession(user: Pick<UserDoc, "_id" | "sessionVersion">) {
-  const token = await signSession({ sub: String(user._id), v: user.sessionVersion ?? 0 });
-  (await cookies()).set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_MAX_AGE,
+  return signSession({
+    sub: String(user._id),
+    v: user.sessionVersion ?? 0,
   });
 }
 
-export async function endSession() {
-  (await cookies()).delete(SESSION_COOKIE);
+export function sessionCookieOptions() {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge: SESSION_MAX_AGE,
+  };
 }
 
 export function newResetToken() {
@@ -50,4 +52,5 @@ export function publicUser(u: UserDoc) {
     },
   };
 }
+
 export type PublicUser = ReturnType<typeof publicUser>;

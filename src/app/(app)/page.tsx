@@ -1,8 +1,9 @@
-"use client";
+﻿"use client";
 import * as React from "react";
 import Link from "next/link";
 import {
   ArrowRight,
+  Bot,
   BarChart3,
   CalendarCheck,
   ClipboardCheck,
@@ -61,6 +62,30 @@ export default function HomePage() {
         </div>
       </div>
 
+      <Card className="overflow-hidden border-primary/20 bg-primary/[0.03]">
+        <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
+              <Bot className="size-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-semibold text-fg">SM AI Assistant</h2>
+                <Badge tone="success">Online</Badge>
+              </div>
+              <p className="mt-1 max-w-2xl text-sm text-fg-muted">
+                Ask SM about your students, attendance, and existing Profile data.
+                SM analyzes your saved Smart Attendance information and responds in chat or voice.
+              </p>
+            </div>
+          </div>
+
+          <LinkButton href="/assistant" className="shrink-0">
+            <Bot /> Ask SM <ArrowRight />
+          </LinkButton>
+        </div>
+      </Card>
+
       {error ? (
         <ErrorState message={errorMessage(error)} onRetry={() => mutate()} />
       ) : isLoading || !data ? (
@@ -93,7 +118,7 @@ export default function HomePage() {
             <StatCard label="Today's Sessions" value={data.totals.todaysSessions} icon={CalendarCheck} hint={pendingToday.length ? `${pendingToday.length} classes not taken yet` : "All caught up"} />
             <StatCard
               label="Average Attendance"
-              value={data.totals.averageAttendance === null ? "—" : `${data.totals.averageAttendance}%`}
+              value={data.totals.averageAttendance === null ? "â€”" : `${data.totals.averageAttendance}%`}
               icon={Percent}
               hint="Last 30 days"
             />
@@ -117,7 +142,7 @@ export default function HomePage() {
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium text-fg">{s.name}</span>
                         <span className="block text-xs text-fg-muted">
-                          {s.module.name} · {s.studentCount ? pluralize(s.studentCount, "student") : "No students"}
+                          {s.module.name} Â· {s.studentCount ? pluralize(s.studentCount, "student") : "No students"}
                         </span>
                       </span>
                       {s.lastAttendance === today ? (
@@ -170,3 +195,4 @@ export default function HomePage() {
     </div>
   );
 }
+

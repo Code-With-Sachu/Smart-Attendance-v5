@@ -1,7 +1,11 @@
+import { NextResponse } from "next/server";
 import { route } from "@/lib/api";
-import { endSession } from "@/lib/auth/server";
+import { SESSION_COOKIE } from "@/lib/auth/jwt";
 
 export const POST = route(async () => {
-  await endSession();
-  return { ok: true };
+  const response = NextResponse.json({ ok: true });
+
+  response.cookies.delete(SESSION_COOKIE);
+
+  return response;
 });
