@@ -12,7 +12,7 @@ export const ai = new GoogleGenAI({
   apiKey,
 });
 
-export const SM_MODEL = "gemini-2.5-flash";
+export const SM_MODEL = "gemini-3.8-flash";
 
 export const SM_SYSTEM_PROMPT = `
 You are SM, the Smart Attendance AI assistant.
@@ -108,7 +108,6 @@ Return a direct answer to the teacher.
       model: SM_MODEL,
       contents: prompt,
       config: {
-        temperature: 0.1,
         maxOutputTokens: 1000,
       },
     });

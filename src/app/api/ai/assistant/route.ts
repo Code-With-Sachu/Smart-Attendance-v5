@@ -1,217 +1,89 @@
 ﻿import { NextResponse } from "next/server";
+import { z } from "zod";
 
-import { route, parseBody, ApiError, getSessionUser } from "@/lib/api";
+import { parseBody, requireUser, route } from "@/lib/api";
+import { generateSMResponse } from "@/lib/ai/gemini";
 import {
   AttendanceSession,
-  FileImport,
   Student,
   StudentDataset,
-  type AttendanceSessionDoc,
-  type StudentDoc,
 } from "@/lib/models";
-import { generateSMResponse } from "@/lib/ai/gemini";
 
-type Message = {
-  role: "user" | "model";
-  text: string;
-};
+const assistantBodySchema = z.object({
+  message: z.string().trim().min(1, "Message is required."),
+  conversation: z
+    .array(
+      z.object({
+        role: z.enum(["user", "model"]),
+        text: z.string(),
+      }),
+    )
+    .max(10)
+    .default([]),
+});
 
-type AssistantBody = {
-  message: string;
-  conversation: Message[];
-};
+type AssistantBody = z.infer<typeof assistantBodySchema>;
 
-function buildApplicationContext(
-  students: StudentDoc[],
-  sessions: AttendanceSessionDoc[],
-  datasets: Array<{
-    _id: unknown;
-    name: string;
-    scope: string;
-    subModuleId?: unknown;
-    lastImportedAt?: Date | null;
-  }>,
-  imports: Array<{
-    fileName: string;
-    fileKind?: string;
-    source: string;
-    totalRows?: number;
-    added?: number;
-    updated?: number;
-    removed?: number;
-    unchanged?: number;
-  }>,
-) {
-  const studentLines = students.map(
-    (s) =>
-      `- Roll: ${s.rollNumber} | Name: ${s.name} | Status: ${s.status}`,
-  );
-
-  const sessionLines = sessions.map((s) => {
-    const records = (s.records ?? [])
-      .map(
-        (r) =>
-          `${r.rollNumberSnapshot} - ${r.studentNameSnapshot}: ${r.status}`,
-      )
-      .join("; ");
-
-    return [
-      `Date: ${s.date}`,
-      `Time: ${s.time}`,
-      `Module: ${s.mainModuleName}`,
-      `Submodule: ${s.subModuleName}`,
-      `Session: ${s.sessionLabel ?? "Session 1"}`,
-      `Total: ${s.total ?? 0}`,
-      `Present: ${s.present ?? 0}`,
-      `Absent: ${s.absent ?? 0}`,
-      `Records: ${records || "No records"}`,
-    ].join(" | ");
-  });
-
-  const datasetLines = datasets.map(
-    (d) =>
-      `- ${d.name} | Scope: ${d.scope} | Last imported: ${
-        d.lastImportedAt
-          ? new Date(d.lastImportedAt).toISOString()
-          : "Never"
-      }`,
-  );
-
-  const importLines = imports.map(
-    (i) =>
-      `- ${i.fileName} | Kind: ${i.fileKind ?? "unknown"} | Source: ${
-        i.source
-      } | Rows: ${i.totalRows ?? 0}`,
-  );
-
+function buildApplicationContext(data: {
+  students: unknown[];
+  sessions: unknown[];
+  datasets: unknown[];
+}) {
   return `
-PROFILE DATASETS:
-${datasetLines.length ? datasetLines.join("\n") : "No Profile datasets found."}
+STUDENT DATA:
+${JSON.stringify(data.students, null, 2)}
 
-STUDENTS:
-${studentLines.length ? studentLines.join("\n") : "No students found."}
+ATTENDANCE DATA:
+${JSON.stringify(data.sessions, null, 2)}
 
-ATTENDANCE:
-${sessionLines.length ? sessionLines.join("\n") : "No attendance sessions found."}
-
-PROFILE IMPORTS:
-${importLines.length ? importLines.join("\n") : "No imports found."}
+DATASETS:
+${JSON.stringify(data.datasets, null, 2)}
 `.trim();
 }
 
+export const runtime = "nodejs";
+
 export const POST = route(async (req) => {
+  // Authentication errors must remain proper 401 errors.
+  const user = await requireUser();
+
+  const body = await parseBody<AssistantBody>(
+    req,
+    assistantBodySchema,
+  );
+
   try {
-    const user = await getSessionUser();
+    const owner = user._id;
 
-    if (!user) {
-      throw new ApiError(
-        401,
-        "Please sign in to use SM.",
-        "unauthorized",
-      );
-    }
-
-    const body = (await parseBody(
-      req,
-      {
-        safeParse(value: unknown) {
-          if (!value || typeof value !== "object") {
-            return {
-              success: false,
-              error: new Error("Invalid request."),
-            } as never;
-          }
-
-          const data = value as {
-            message?: unknown;
-            conversation?: unknown;
-          };
-
-          if (
-            typeof data.message !== "string" ||
-            data.message.trim().length === 0
-          ) {
-            return {
-              success: false,
-              error: new Error("Message is required."),
-            } as never;
-          }
-
-          const conversation: Message[] =
-            Array.isArray(data.conversation)
-              ? data.conversation
-                  .filter(
-                    (item): item is Message =>
-                      !!item &&
-                      typeof item === "object" &&
-                      ((item as Message).role === "user" ||
-                        (item as Message).role === "model") &&
-                      typeof (item as Message).text === "string",
-                  )
-                  .slice(-10)
-              : [];
-
-          return {
-            success: true,
-            data: {
-              message: data.message.trim(),
-              conversation,
-            },
-          } as never;
-        },
-      } as never,
-    )) as AssistantBody;
-
-    console.log("SM request:", body.message);
-    console.log("SM user:", String(user._id));
-
-    const [datasets, students, sessions, imports] = await Promise.all([
-      StudentDataset.find({
-        owner: user._id,
-      })
-        .select("_id name scope subModuleId lastImportedAt")
-        .sort({ scope: 1, name: 1 })
-        .lean(),
-
+    const [students, sessions, datasets] = await Promise.all([
       Student.find({
-        owner: user._id,
+        owner,
         deletedAt: null,
       })
-        .select("_id datasetId rollNumber name status")
-        .sort({ rollNumber: 1 })
-        .lean<StudentDoc[]>(),
+        .sort({ name: 1 })
+        .limit(500)
+        .lean(),
 
       AttendanceSession.find({
-        owner: user._id,
+        owner,
       })
-        .sort({ date: -1, time: -1 })
+        .sort({ date: -1, createdAt: -1 })
         .limit(100)
-        .lean<AttendanceSessionDoc[]>(),
+        .lean(),
 
-      FileImport.find({
-        owner: user._id,
+      StudentDataset.find({
+        owner,
       })
-        .select(
-          "fileName fileKind source totalRows added updated removed unchanged",
-        )
         .sort({ createdAt: -1 })
         .limit(50)
         .lean(),
     ]);
 
-    console.log("SM data:", {
-      students: students.length,
-      datasets: datasets.length,
-      sessions: sessions.length,
-      imports: imports.length,
-    });
-
-    const context = buildApplicationContext(
+    const context = buildApplicationContext({
       students,
       sessions,
       datasets,
-      imports,
-    );
+    });
 
     const answer = await generateSMResponse(
       body.message,
@@ -219,11 +91,9 @@ export const POST = route(async (req) => {
       body.conversation,
     );
 
-    console.log("SM response generated successfully.");
-
     return NextResponse.json({
       answer,
-      assistant: "SM",
+      error: null,
     });
   } catch (error) {
     console.error("========== SM API ERROR ==========");
@@ -233,11 +103,10 @@ export const POST = route(async (req) => {
     return NextResponse.json(
       {
         answer: null,
-        error: "SM request failed.",
-        details:
-          process.env.NODE_ENV === "development" && error instanceof Error
+        error:
+          error instanceof Error
             ? error.message
-            : undefined,
+            : String(error),
       },
       { status: 500 },
     );
