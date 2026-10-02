@@ -103,26 +103,53 @@ ${message}
 Return a direct answer to the teacher.
 `;
 
-  try {
-    const response = await ai.models.generateContent({
-      model: SM_MODEL,
-      contents: prompt,
-      config: {
-        maxOutputTokens: 1000,
-      },
-    });
+  const maxRetries = 3;
 
-    return (
-      response.text?.trim() ||
-      "I couldn't generate a response."
-    );
-  } catch (error) {
-    console.error("SM Gemini error:", error);
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await ai.models.generateContent({
+        model: SM_MODEL,
+        contents: prompt,
+        config: {
+          maxOutputTokens: 1000,
+        },
+      });
 
-    if (error instanceof Error) {
-      throw new Error(`Gemini error: ${error.message}`);
+      return (
+        response.text?.trim() ||
+        "I couldn't generate a response."
+      );
+    } catch (error) {
+      console.error(
+        `SM Gemini error (attempt ${attempt}/${maxRetries}):`,
+        error,
+      );
+
+      const errorText =
+        error instanceof Error ? error.message : String(error);
+
+      const isTemporary =
+        errorText.includes("503") ||
+        errorText.includes("UNAVAILABLE") ||
+        errorText.includes("high demand") ||
+        errorText.includes("429") ||
+        errorText.includes("RESOURCE_EXHAUSTED");
+
+      if (!isTemporary || attempt === maxRetries) {
+        throw new Error(`Gemini error: ${errorText}`);
+      }
+
+      const delay = attempt * 2000;
+
+      console.log(
+        `Gemini temporarily unavailable. Retrying in ${delay}ms...`,
+      );
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, delay),
+      );
     }
-
-    throw new Error("Gemini request failed.");
   }
+
+  throw new Error("Gemini request failed after retries.");
 }
